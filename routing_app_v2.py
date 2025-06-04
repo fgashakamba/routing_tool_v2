@@ -8,11 +8,14 @@ import os
 import time
 import tempfile 
 from caculate_optimal_route import optimal_route
-
+from dotenv import load_dotenv
 
 # Set OpenRouteService API key
-os.environ['OPENROUTESERVICE_KEY'] = "5b3ce3597851110001cf6248c25b517341e94033b8c21d63ecda95b6"
-ors_client = ors.Client(key=os.environ['OPENROUTESERVICE_KEY'])
+load_dotenv()
+ors_api_key = os.environ.get('OPENROUTESERVICE_KEY')
+if not ors_api_key:
+    raise ValueError("OPENROUTESERVICE_KEY environment variable not set.")
+ors_client = ors.Client(key=ors_api_key)
 
 # Load auxiliary layers
 lakes = gpd.read_file(os.path.join(os.path.dirname(__file__),  'data_wgs84', 'RW_lakes.gpkg'))

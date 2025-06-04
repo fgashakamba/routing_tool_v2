@@ -132,18 +132,16 @@ app_ui = ui.page_fluid(
                 # Calculate button card
                 ui.card(
                     #ui.card_header("Calculate Route"),
-                    ui.p(
                         ui.input_action_button("processButton", label="Calculate Optimal Route", class_="btn-primary w-100 mb-2")
-                    )
                 )
             ),
             ui.column(9,
                 # Button pills at the top of the map
                 ui.div(
                     ui.download_button(id="downloadRoute", label="Get route file", class_="btn-sm btn-secondary"),
-                    ui.download_button(id="downloadRouteSegments", label="Get road segments distances", class_="btn-sm btn-secondary"),
+                    ui.download_button(id="downloadRouteSegments", label="Get route segments distances", class_="btn-sm btn-secondary"),
                     ui.input_action_button("Show_Segments_Table", label="Show route segments", class_="btn-sm btn-info"),
-                    ui.input_action_button("Show_Table", label="Show surface statistics", class_="btn-sm btn-info"),
+                    ui.input_action_button("Show_Table", label="Show road surface statistics", class_="btn-sm btn-info"),
                     class_="button-pills"
                 ),
                 ui.card(
@@ -768,11 +766,27 @@ def server(input, output, session):
     def map():
         _ = rerender_trigger()  # Make the map depend on this trigger to force rerender when new points are clicked
         try:
-            # Create a map centered on the country and add country boundary
+            # Create a map centered on the country and a default basemap
             m = folium.Map(location=center_coords, zoom_start=8.5)
-            folium.GeoJson(country).add_to(m)
+            
+            # Add some optional basemaps
+            folium.TileLayer('CartoDB positron', name='CartoDB Positron (Light)').add_to(m)
 
-            # Style functions (same as before)
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Google Satellite (Unofficial)'
+            ).add_to(m)
+
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Google Terrain (Unofficial)'
+            ).add_to(m)
+
+            folium.TileLayer('OpenStreetMap', name='Open Street Map').add_to(m) # add OSM last to make it the default
+
+            # Style functions for various layers
             def style_country(feature):
                 return {
                     'fillColor': '#acbbb4',
@@ -798,13 +812,12 @@ def server(input, output, session):
                 }
 
             # Add layers
-            folium.GeoJson(country, style_function=style_country).add_to(m)
-            folium.GeoJson(np, style_function=style_np).add_to(m)
-            folium.GeoJson(lakes, style_function=style_lakes).add_to(m)
+            folium.GeoJson(country, style_function=style_country, name="Country Border", control=False).add_to(m)
+            folium.GeoJson(np, style_function=style_np, name="National Parks", control=False).add_to(m)
+            folium.GeoJson(lakes, style_function=style_lakes, name="Lakes", control=False).add_to(m)
 
             # Create a feature group for dynamically added markers
-            dynamic_markers = folium.FeatureGroup(name="Dynamic Markers").add_to(m)
-
+            dynamic_markers = folium.FeatureGroup(name="Dynamic Markers", control=False).add_to(m)
 
             # Add map click functionality
             if input.input_method() == "map_click":
@@ -894,7 +907,11 @@ def server(input, output, session):
                         tooltip=tooltip_text
                     ).add_to(m)
 
+            # Add the Layer Control 
+            folium.LayerControl(collapsed=True, overlays=False).add_to(m)
+
             return ui.HTML(m._repr_html_())
+        
         except Exception as e:
             print(f"Error in map function: {str(e)}")
             return "An error occurred while creating the map."
