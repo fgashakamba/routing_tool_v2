@@ -720,7 +720,7 @@ def server(input, output, session):
             id_field = dest_id_field()
             all_files_provided = all(df is not None and not df.empty for df in files.values())
             if not (all_files_provided and id_field):
-                ui.notification_show("Please upload all files and select an ID field before processing.", type="warning")
+                ui.notification_show("Please upload all files and select a name ID field before processing.", type="warning")
                 return
         elif method == "map_click":
             source_df, final_df, dest_df, id_field = prepare_map_click_data()
@@ -750,30 +750,35 @@ def server(input, output, session):
 
         if calculated_result is not None:
             ui.notification_show("Route optimization completed successfully!", type="message")
-        else:
-            ui.notification_show("An error occurred during route optimization.", type="error")
+        # else:
+        #     ui.notification_show("An error occurred during route optimization.", type="error")
 
     # Map rendering
     @render.ui
     def map():
         _ = rerender_trigger()  # Make the map depend on this trigger to force rerender when new points are clicked
         try:
-            # Create a map centered on the country and a default basemap
+            # Create a map centered on the country and remove OSM as the default basemap
             m = folium.Map(location=center_coords, zoom_start=8.5)
+
+            # Remove the default OpenStreetMap layer; we will add it again last
+            for key in list(m._children.keys()):
+                if key.startswith('openstreetmap'):
+                    del m._children[key]
             
             # Add some optional basemaps
-            folium.TileLayer('CartoDB positron', name='CartoDB Positron (Light)').add_to(m)
+            folium.TileLayer('CartoDB positron', name='CartoDB Positron').add_to(m)
 
             folium.TileLayer(
                 tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
                 attr='Google',
-                name='Google Satellite (Unofficial)'
+                name='Google Satellite'
             ).add_to(m)
 
             folium.TileLayer(
                 tiles='https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
                 attr='Google',
-                name='Google Terrain (Unofficial)'
+                name='Google Terrain'
             ).add_to(m)
 
             folium.TileLayer('OpenStreetMap', name='Open Street Map').add_to(m) # add OSM last to make it the default
